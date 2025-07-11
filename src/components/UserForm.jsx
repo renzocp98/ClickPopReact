@@ -1,14 +1,13 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState } from "react";
 
 const initialDataForm = {
     id: 0,
     username: '',
     country: '',
     password: ''
-}
+};
 
 export const UserForm = ({ userSelected, handlerAdd }) => {
-
     const [form, setForm] = useState(initialDataForm);
     const { id, username, country, password } = form;
 
@@ -69,4 +68,4 @@ export const UserForm = ({ userSelected, handlerAdd }) => {
             </button>
         </form>
     );
-}
+};

@@ -5,7 +5,7 @@ import rollupNodePolyFill from 'rollup-plugin-node-polyfills';
 export default defineConfig({
   plugins: [react()],
   define: {
-    global: 'globalThis' // 🛠️ Polyfill para "global"
+    global: 'globalThis' 
   },
   optimizeDeps: {
     include: ['sockjs-client', '@stomp/stompjs']
