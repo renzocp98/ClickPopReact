@@ -7,35 +7,46 @@ const initialDataForm = {
     password: ''
 };
 
-export const UserForm = ({ userSelected, handlerAdd }) => {
+export const UserForm = ({ userSelected, handlerAdd, resetForm }) => {
     const [form, setForm] = useState(initialDataForm);
     const { id, username, country, password } = form;
 
+    // 🔄 Solo actualizar si resetForm es falso
     useEffect(() => {
-        setForm(userSelected);
-    }, [userSelected]);
+        if (resetForm) {
+            setForm(initialDataForm);
+        } else if (userSelected) {
+            setForm(userSelected);
+        }
+    }, [userSelected, resetForm]);
+
+    const handleChange = (e) => {
+        setForm({
+            ...form,
+            [e.target.name]: e.target.value
+        });
+    };
+
+    const handleSubmit = (event) => {
+        event.preventDefault();
+
+        if (!username || !country || !password) {
+            alert('Debe completar todos los campos del formulario!');
+            return;
+        }
+
+        handlerAdd(form);
+    };
 
     return (
-        <form onSubmit={(event) => {
-            event.preventDefault();
-            if (!username || !country || !password) {
-                alert('Debe completar todos los campos del formulario!');
-                return;
-            }
-
-            handlerAdd(form);
-            setForm(initialDataForm);
-        }}>
+        <form onSubmit={handleSubmit}>
             <div>
                 <input
                     placeholder="Username"
                     className="form-control my-3 w-75"
                     name="username"
                     value={username}
-                    onChange={(event) => setForm({
-                        ...form,
-                        username: event.target.value
-                    })}
+                    onChange={handleChange}
                 />
             </div>
             <div>
@@ -44,10 +55,7 @@ export const UserForm = ({ userSelected, handlerAdd }) => {
                     className="form-control my-3 w-75"
                     name="country"
                     value={country}
-                    onChange={(event) => setForm({
-                        ...form,
-                        country: event.target.value
-                    })}
+                    onChange={handleChange}
                 />
             </div>
             <div>
@@ -57,10 +65,7 @@ export const UserForm = ({ userSelected, handlerAdd }) => {
                     className="form-control my-3 w-75"
                     name="password"
                     value={password}
-                    onChange={(event) => setForm({
-                        ...form,
-                        password: event.target.value
-                    })}
+                    onChange={handleChange}
                 />
             </div>
             <button type="submit" className="btn btn-primary">
