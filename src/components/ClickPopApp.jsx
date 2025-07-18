@@ -70,10 +70,6 @@ export const ClickPopApp = () => {
 
         try {
             await axios.post("http://localhost:8090/game/create", userSelected);
-           // const x = Math.floor(Math.random() * 300);
-           // const y = Math.floor(Math.random() * 300);
-           // handleSendClick(x, y);// PUNTO GENERADO ERRONEAMENTE, NO ESTA PLANEADO
-           // setGameStarted(true);
         } catch (error) {
             alert("No se pudo iniciar la partida. Verifica el backend.");
         }

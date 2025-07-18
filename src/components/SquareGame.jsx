@@ -19,7 +19,6 @@ export const SquareGame = ({ onClickSend, gameStarted, pointData }) => {
     useEffect(() => {
         if (canvasRef.current) {
             const ctx = canvasRef.current.getContext("2d");
-           // ctx.clearRect(0, 0, 300, 300); // Limpia el canvas
 
             if (pointData?.points) {
                 ctx.clearRect(0, 0, 300, 300);
