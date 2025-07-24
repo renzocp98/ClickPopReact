@@ -11,15 +11,24 @@ export const ClickPopApp = () => {
     const [score, setScore] = useState(0);
     const [gameStarted, setGameStarted] = useState(false);
     const [resetForm, setResetForm] = useState(false);
+    const [pointData, setPointData] = useState(null);
 
-    useEffect(() => {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-            setUserSelected(JSON.parse(storedUser));
+    const handlerAdd = async (user) => {
+        try {
+            const userWithRole = {
+                ...user,
+                role: { name: 'USER' }
+            };
+            const response = await axios.post('http://localhost:8090/users/register', userWithRole);
+            alert('Usuario registrado correctamente');
+            setUserSelected(response.data);
+            setResetForm(true);
+        } catch (error) {
+            alert(error.response?.data || 'Error al registrar usuario');
         }
-    }, []);
+    };
 
-    useEffect(() => {
+    useEffect(() => {// PROBLEMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA DOS SUBSCRIPCIONES MAAAL
         const socket = new SockJS("http://localhost:8090/game-WS");
         const client = Stomp.over(socket);
 
@@ -28,27 +37,34 @@ export const ClickPopApp = () => {
 
             client.subscribe("/backsend/score", (message) => {
                 const data = JSON.parse(message.body);
+                console.log("🎯 Puntos recibidos:", data);
                 setScore((prev) => prev + data.points);
             });
 
             client.subscribe("/backsend/points", (message) => {
-                const points = JSON.parse(message.body);
-                setGameStarted(true);
-            });
+            const points = JSON.parse(message.body);
+            console.log("📍 Coordenadas recibidas:", points);
+            setPointData(points);
+            setGameStarted(true); //  Activa el juego 
+});
+
         });
 
         setStompClient(client);
     }, []);
 
-    const handleSendClick = (x, y) => {
-        if (stompClient?.connected) {
+    const handleSendClick = (x, y) => {// ENVIA CADA COORDENADA DEL CLICK
+        if (stompClient && stompClient.connected) {
             stompClient.send("/click/registerClick", {}, JSON.stringify({ x, y }));
+            console.log(`📤 Enviando click: x=${x}, y=${y}`);
+        } else {
+            console.warn("⚠️ WebSocket no conectado aún.");
         }
     };
 
     const handleStartGame = async () => {
-        if (!userSelected?.username || !userSelected?.password) {
-            alert("Debes iniciar sesión o crear un usuario.");
+        if (!userSelected?.username || !userSelected?.country || !userSelected?.password) {
+            alert("Debes crear un usuario antes de iniciar la partida.");
             return;
         }
 
@@ -59,82 +75,42 @@ export const ClickPopApp = () => {
         }
     };
 
-    const handleRegister = async (userFormData) => {
-        const userToCreate = {
-            ...userFormData,
-            role: { name: 'USER' }
-        };
+    useEffect(() => {
+        if (resetForm) setResetForm(false);
+    }, [resetForm]);
 
-        try {
-            const response = await axios.post('http://localhost:8090/users/register', userToCreate);
-            alert('Usuario registrado correctamente');
-            localStorage.setItem('user', JSON.stringify(response.data));
-            setUserSelected(response.data);
-            setResetForm(true);
-        } catch (error) {
-            alert(error.response?.data || 'Error al registrar usuario');
-        }
-    };
-
-    const handleLogin = async (userFormData) => {
-        try {
-            await axios.post('http://localhost:8090/SessionInfo/login', userFormData);
-            alert("Inicio de sesión exitoso");
-            localStorage.setItem('user', JSON.stringify(userFormData));
-            setUserSelected(userFormData);
-        } catch (error) {
-            alert("Error al iniciar sesión");
-        }
-    };
-
-    const handleLogout = async () => {
-        try {
-            await axios.post("http://localhost:8090/SessionInfo/logout");
-            localStorage.removeItem('user');
-            setUserSelected(null);
-            setResetForm(true);
-        } catch (error) {
-            alert("Error al cerrar sesión");
-        }
-    };
+    const userLoggedIn = !!userSelected?.username;
 
     return (
         <div className="app-square" style={{ padding: '20px' }}>
             <h1 className="title">ClickPop - Juego</h1>
 
-            {userSelected && (
+            {userLoggedIn && (
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '20px' }}>
                     <p style={{ fontSize: '18px' }}>Puntaje actual: {score}</p>
                     <span style={{ fontSize: '16px', fontWeight: 'bold' }}>
                         | Usuario: {userSelected.username}
                     </span>
-                    <button onClick={handleLogout} style={{ marginLeft: '20px' }}>Cerrar sesión</button>
                 </div>
             )}
 
-            {!userSelected && (
-                <div className="user-form-container" style={{ marginBottom: '20px' }}>
-                    <UserForm
-                        handlerAdd={handleRegister}
-                        handlerLogin={handleLogin}
-                        resetForm={resetForm}
-                        userSelected={null}
-                    />
-                </div>
-            )}
-
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '20px' }}>
+                <UserForm
+                    handlerAdd={handlerAdd}
+                    resetForm={resetForm}
+                    userSelected={userSelected}
+                />
                 <button
                     onClick={handleStartGame}
                     className="btn btn-success"
-                    disabled={!userSelected}
+                    disabled={!userLoggedIn}
                     style={{
                         height: '40px',
-                        marginTop: '10px',
-                        backgroundColor: userSelected ? '#28a745' : '#ccc',
-                        borderColor: userSelected ? '#28a745' : '#ccc',
-                        color: userSelected ? 'white' : '#666',
-                        cursor: userSelected ? 'pointer' : 'not-allowed'
+                        marginTop: '25px',
+                        backgroundColor: userLoggedIn ? '#28a745' : '#ccc',
+                        borderColor: userLoggedIn ? '#28a745' : '#ccc',
+                        color: userLoggedIn ? 'white' : '#666',
+                        cursor: userLoggedIn ? 'pointer' : 'not-allowed'
                     }}
                 >
                     Iniciar partida
@@ -144,7 +120,7 @@ export const ClickPopApp = () => {
             <SquareGame
                 onClickSend={handleSendClick}
                 gameStarted={gameStarted}
-                pointData={null}
+                pointData={pointData}
             />
         </div>
     );

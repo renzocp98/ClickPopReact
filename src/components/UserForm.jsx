@@ -1,3 +1,4 @@
+// UserForm.jsx
 import { useEffect, useState } from "react";
 
 const initialDataForm = {
@@ -35,13 +36,17 @@ export const UserForm = ({ userSelected, handlerAdd, handlerLogin, resetForm }) 
         handlerAdd(form);
     };
 
-    const handleLogin = (e) => {
+    const handleLoginClick = (e) => {
         e.preventDefault();
         if (!username || !password) {
             alert('Debe ingresar usuario y contraseña para iniciar sesión.');
             return;
         }
-        handlerLogin(form);
+        if (handlerLogin) {
+            handlerLogin(form);
+        } else {
+            alert('Funcionalidad de login no disponible.');
+        }
     };
 
     return (
@@ -83,7 +88,7 @@ export const UserForm = ({ userSelected, handlerAdd, handlerLogin, resetForm }) 
                 <button className="btn btn-primary" onClick={handleRegister}>
                     Crear usuario
                 </button>
-                <button className="btn btn-secondary" onClick={handleLogin}>
+                <button className="btn btn-secondary" onClick={handleLoginClick}>
                     Iniciar sesión
                 </button>
             </div>
