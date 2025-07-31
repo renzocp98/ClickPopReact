@@ -29,11 +29,35 @@ export const ClickPopApp = () => {
    // };
 
     useEffect(() => {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-            setUserSelected(JSON.parse(storedUser));
-        }
-    }, []);
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+        setUserSelected(JSON.parse(storedUser));
+    }
+
+    const storedPoints = localStorage.getItem("pointData");
+    if (storedPoints) {
+        setPointData(JSON.parse(storedPoints));
+        setGameStarted(true);
+    }
+
+    const storedScore = localStorage.getItem('score');
+    if (storedScore) {
+        setScore(JSON.parse(storedScore));
+    }
+}, []);
+
+
+    useEffect(() => {
+      if (pointData) {
+        localStorage.setItem('pointData', JSON.stringify(pointData));
+      }
+    }, [pointData]);
+    
+    useEffect(() => {
+      if (score !== null) {
+        localStorage.setItem('score', JSON.stringify(score));
+      }
+    }, [score]);
 
     useEffect(() => {
         const socket = new SockJS("http://localhost:8090/game-WS");
@@ -42,22 +66,37 @@ export const ClickPopApp = () => {
         client.connect({}, () => {
             console.log("✅ Conectado a WebSocket");
 
+            client.unsubscribe("score-sub");
+
+            console.log("🧪 Suscribiéndome al canal /backsend/score");
+
             client.subscribe("/backsend/score", (message) => {
+                console.log("📬 Suscripción a /backsend/score registrada");
+
                 const data = JSON.parse(message.body);
                 console.log("🎯 Puntos recibidos:", data);
-                setScore((prev) => prev + data.points);
-            });
+                setScore(() => data.points);
+                localStorage.setItem("score", JSON.stringify(data.points));
+            }, { id: "score-sub" });
+
+            console.log("📡 Intentando conectar WebSocket...");
 
             client.subscribe("/backsend/points", (message) => {
                 const points = JSON.parse(message.body);
                 console.log("📍 Coordenadas recibidas:", points);
                 setPointData(points);
                 setGameStarted(true);
+                localStorage.setItem("pointData", JSON.stringify(points));
             });
         });
 
         setStompClient(client);
-    }, []);
+        return () => {
+            client.disconnect(() => {
+              console.log("🔌 Desconectado de WebSocket");
+            });
+        };
+    }, [])
 
     useEffect(() => {
         if (resetForm) setResetForm(false);
@@ -135,15 +174,31 @@ export const ClickPopApp = () => {
 
 
     const handleLogout = async () => {
-        try {
-            await axios.post("http://localhost:8090/SessionInfo/logout");
-            localStorage.removeItem('user');
-            setUserSelected(null);
-            setResetForm(true);
-        } catch (error) {
-            alert("Error al cerrar sesión");
-        }
-    };
+    // Si hay una partida activa, advertir
+    if (gameStarted) {
+        const confirmExit = window.confirm(
+            "⚠️ Estás en medio de una partida. ¿Seguro que quieres cerrar sesión y perder el progreso?"
+        );
+
+        if (!confirmExit) return; // Usuario cancela cierre
+    }
+
+    try {
+        await axios.post("http://localhost:8090/SessionInfo/logout");
+
+        // Limpiar estado y almacenamiento
+        localStorage.removeItem("user");
+        localStorage.removeItem("pointData");
+        setUserSelected(null);
+        setPointData(null);
+        setScore(0);
+        setGameStarted(false);
+        setResetForm(true);
+    } catch (error) {
+        alert("Error al cerrar sesión");
+    }
+};
+
 
     return (
         <div className="app-square" style={{ padding: '20px' }}>

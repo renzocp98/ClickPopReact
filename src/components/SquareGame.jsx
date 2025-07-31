@@ -28,7 +28,7 @@ export const SquareGame = ({ onClickSend, gameStarted, pointData }) => {
                 ctx.fillStyle = "red";
                 ctx.fill();  
 });
-;
+
             }
 
         }
