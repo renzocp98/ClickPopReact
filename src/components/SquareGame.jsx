@@ -15,19 +15,21 @@ export const SquareGame = ({ onClickSend, gameStarted, pointData }) => {
 
         onClickSend(x, y);
     };
-
+    
+    
     useEffect(() => {
         if (canvasRef.current) {
             const ctx = canvasRef.current.getContext("2d");
 
             if (pointData?.points) {
+
                 ctx.clearRect(0, 0, 300, 300);
                 pointData.points.forEach(([x, y]) => {
                 ctx.beginPath();  
                 ctx.arc(x, y, 8, 0, 2 * Math.PI);  
                 ctx.fillStyle = "red";
                 ctx.fill();  
-});
+                });
 
             }
 

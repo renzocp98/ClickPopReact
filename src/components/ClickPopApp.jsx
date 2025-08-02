@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef} from 'react';
 import { SquareGame } from './SquareGame';
 import { UserForm } from './UserForm';
 import SockJS from 'sockjs-client';
@@ -12,21 +12,8 @@ export const ClickPopApp = () => {
     const [gameStarted, setGameStarted] = useState(false);
     const [resetForm, setResetForm] = useState(false);
     const [pointData, setPointData] = useState(null);
+    const lastClickRef = useRef(null);
 
-   // const handlerAdd = async (user) => {
-   //     try {
-   //         const userWithRole = {
-   //             ...user,
-   //             role: { name: 'USER' }
-   //         };
-   //         const response = await axios.post('http://localhost:8090/users/register', userWithRole);
-   //         alert('Usuario registrado correctamente');
-   //         setUserSelected(response.data);
-   //         setResetForm(true);
-   //     } catch (error) {
-   //         alert(error.response?.data || 'Error al registrar usuario');
-   //     }
-   // };
 
     useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -75,8 +62,25 @@ export const ClickPopApp = () => {
 
                 const data = JSON.parse(message.body);
                 console.log("🎯 Puntos recibidos:", data);
+                const { message: correct } = data;
                 setScore(() => data.points);
                 localStorage.setItem("score", JSON.stringify(data.points));
+
+               
+
+                if (correct && lastClickRef.current && pointData?.points) {
+                     const { x, y } = lastClickRef.current;
+
+                    const updatedPoints = pointData.points.filter(([px, py]) => {
+                        const distance = Math.sqrt((px - x) ** 2 + (py - y) ** 2);
+                        return distance > 5; // tolerancia de acierto, puedes ajustar
+                    });
+
+                    const newPointData = { ...pointData, points: updatedPoints };
+                    setPointData(newPointData);
+                    localStorage.setItem("pointData", JSON.stringify(newPointData));
+                }
+
             }, { id: "score-sub" });
 
             console.log("📡 Intentando conectar WebSocket...");
@@ -106,6 +110,7 @@ export const ClickPopApp = () => {
         if (stompClient && stompClient.connected) {
             stompClient.send("/click/registerClick", {}, JSON.stringify({ x, y }));
             console.log(`📤 Enviando click: x=${x}, y=${y}`);
+            lastClickRef.current = { x, y };
         }else {
             console.warn("⚠️ WebSocket no conectado aún.");
         }
@@ -141,16 +146,7 @@ export const ClickPopApp = () => {
         }
     };
 
-    //const handleLogin = async (userFormData) => {
-    //    try {
-    //        await axios.post('http://localhost:8090/SessionInfo/login', userFormData);
-    //        alert("Inicio de sesión exitoso");
-    //        localStorage.setItem('user', JSON.stringify(userFormData));
-    //        setUserSelected(userFormData);
-    //    } catch (error) {
-    //        alert("Error al iniciar sesión");
-    //    }
-    //};
+    
 
     const handleLogin = async (formUser) => {
     try {
