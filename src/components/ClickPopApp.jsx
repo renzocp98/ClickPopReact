@@ -14,6 +14,7 @@ export const ClickPopApp = () => {
     const [pointData, setPointData] = useState(null);
     const [correctPoints, setCorrectPoints] = useState([]);
     const lastClickRef = useRef(null);
+    const [currentGame, setCurrentGame] = useState(null);
 
 
     useEffect(() => {
@@ -110,6 +111,29 @@ export const ClickPopApp = () => {
         if (resetForm) setResetForm(false);
     }, [resetForm]);
 
+
+    const handleEndGame = async () => {
+        if (!currentGame) {
+            alert("No hay partida activa.");
+            return;
+        }
+
+        try {
+            await axios.put(`http://localhost:8090/game/score/${score}`, currentGame);
+            alert("Puntaje guardado con éxito.");
+            setCurrentGame(null); // Resetea para una nueva partida
+            setScore(0);
+            setGameStarted(false);
+            setPointData(null);
+            setCorrectPoints([]);
+        } catch (error) {
+            console.error("Error al terminar partida:", error);
+            alert("No se pudo guardar el puntaje.");
+        }
+    };
+
+
+
     const handleSendClick = (x, y) => {
     if (stompClient && stompClient.connected) {
         stompClient.send("/click/registerClick", {}, JSON.stringify({ x, y }));
@@ -148,7 +172,8 @@ export const ClickPopApp = () => {
         }
 
         try {
-            await axios.post("http://localhost:8090/game/create", userSelected);
+            const response = await axios.post("http://localhost:8090/game/create", userSelected);
+            setCurrentGame(response.data); // Guarda el Game completo con ID
             setCorrectPoints([]);
         } catch (error) {
             alert("No se pudo iniciar la partida. Verifica el backend.");
@@ -262,6 +287,19 @@ export const ClickPopApp = () => {
                     }}
                 >
                     Iniciar partida
+                </button>
+                <button 
+                    onClick={handleEndGame} 
+                    disabled={!gameStarted} 
+                    style={{
+                        height: '40px',
+                        marginTop: '10px',
+                        backgroundColor: userSelected ? '#da0e07ff' : '#ccc',
+                        borderColor: userSelected ? '#da0e07ff' : '#ccc',
+                        color: userSelected ? 'white' : '#666',
+                        cursor: userSelected ? 'pointer' : 'not-allowed'
+                    }}>
+                    Terminar Partida
                 </button>
             </div>
 
