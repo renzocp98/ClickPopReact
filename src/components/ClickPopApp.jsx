@@ -12,6 +12,7 @@ export const ClickPopApp = () => {
     const [gameStarted, setGameStarted] = useState(false);
     const [resetForm, setResetForm] = useState(false);
     const [pointData, setPointData] = useState(null);
+    const [correctPoints, setCorrectPoints] = useState([]);
     const lastClickRef = useRef(null);
 
 
@@ -56,6 +57,9 @@ export const ClickPopApp = () => {
             client.unsubscribe("score-sub");
 
             console.log("🧪 Suscribiéndome al canal /backsend/score");
+
+
+            
 
             client.subscribe("/backsend/score", (message) => {
                 console.log("📬 Suscripción a /backsend/score registrada");
@@ -107,47 +111,35 @@ export const ClickPopApp = () => {
     }, [resetForm]);
 
     const handleSendClick = (x, y) => {
-        if (stompClient && stompClient.connected) {
-            stompClient.send("/click/registerClick", {}, JSON.stringify({ x, y }));
-            console.log(`📤 Enviando click: x=${x}, y=${y}`);
-            lastClickRef.current = { x, y };
+    if (stompClient && stompClient.connected) {
+        stompClient.send("/click/registerClick", {}, JSON.stringify({ x, y }));
+        lastClickRef.current = { x, y };
 
-            const RADIUS = 8; 
+        if (pointData?.points) {
+            const closest = pointData.points.reduce((closestPoint, point) => {
+                const [px, py] = point;
+                const dist = Math.hypot(px - x, py - y);
+                return !closestPoint || dist < closestPoint.dist
+                    ? { point, dist }
+                    : closestPoint;
+            }, null);
 
-            if (pointData?.points?.length > 0) {
-                let closest = null;
-                let minDist = Infinity;
+            if (closest && closest.dist <= 8) { // radio de acierto
+                const [cx, cy] = closest.point;
 
-                for (const [px, py] of pointData.points) {
-                    const dist = Math.hypot(px - x, py - y);
-                    if (dist < minDist) {
-                        minDist = dist;
-                        closest = [px, py];
-                    }
-                }
+                const alreadyCorrect = correctPoints.some(
+                    ([gx, gy]) => gx === cx && gy === cy
+                );
 
-                if (minDist <= RADIUS) {
-                    const updatedPointData = {
-                        ...pointData,
-                        highlighted: closest
-                    };
-                    setPointData(updatedPointData);
-                    localStorage.setItem("pointData", JSON.stringify(updatedPointData));
-                } else {                
-                    const updatedPointData = {
-                        ...pointData,
-                        highlighted: null
-                    };
-                    setPointData(updatedPointData);
-                    localStorage.setItem("pointData", JSON.stringify(updatedPointData));
+                if (!alreadyCorrect) {
+                    setCorrectPoints([...correctPoints, [cx, cy]]);
                 }
             }
-        } else {
-                console.warn("⚠️ WebSocket no conectado aún.");
-            }
-    };
-   
-    
+        }
+    } else {
+            console.warn("⚠️ WebSocket no conectado aún.");
+        }
+    };    
 
     const handleStartGame = async () => {
         if (!userSelected?.username || !userSelected?.password) {
@@ -157,6 +149,7 @@ export const ClickPopApp = () => {
 
         try {
             await axios.post("http://localhost:8090/game/create", userSelected);
+            setCorrectPoints([]);
         } catch (error) {
             alert("No se pudo iniciar la partida. Verifica el backend.");
         }
@@ -276,6 +269,7 @@ export const ClickPopApp = () => {
                 onClickSend={handleSendClick}
                 gameStarted={gameStarted}
                 pointData={pointData}
+                correctPoints={correctPoints}
             />
         </div>
     );
