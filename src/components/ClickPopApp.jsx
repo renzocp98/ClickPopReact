@@ -106,44 +106,48 @@ export const ClickPopApp = () => {
         if (resetForm) setResetForm(false);
     }, [resetForm]);
 
-    // ...importaciones y estados igual...
-
     const handleSendClick = (x, y) => {
         if (stompClient && stompClient.connected) {
             stompClient.send("/click/registerClick", {}, JSON.stringify({ x, y }));
             console.log(`📤 Enviando click: x=${x}, y=${y}`);
             lastClickRef.current = { x, y };
-        
+
+            const RADIUS = 8; 
+
             if (pointData?.points?.length > 0) {
-                const closest = pointData.points.reduce((closest, [px, py]) => {
+                let closest = null;
+                let minDist = Infinity;
+
+                for (const [px, py] of pointData.points) {
                     const dist = Math.hypot(px - x, py - y);
-                    const closestDist = Math.hypot(closest[0] - x, closest[1] - y);
-                    return dist < closestDist ? [px, py] : closest;
-                }, pointData.points[0]);
-            
-                const updatedPointData = {
-                    ...pointData,
-                    highlighted: closest
-                };
-            
-                setPointData(updatedPointData);
-                localStorage.setItem("pointData", JSON.stringify(updatedPointData));
+                    if (dist < minDist) {
+                        minDist = dist;
+                        closest = [px, py];
+                    }
+                }
+
+                if (minDist <= RADIUS) {
+                    const updatedPointData = {
+                        ...pointData,
+                        highlighted: closest
+                    };
+                    setPointData(updatedPointData);
+                    localStorage.setItem("pointData", JSON.stringify(updatedPointData));
+                } else {                
+                    const updatedPointData = {
+                        ...pointData,
+                        highlighted: null
+                    };
+                    setPointData(updatedPointData);
+                    localStorage.setItem("pointData", JSON.stringify(updatedPointData));
+                }
             }
         } else {
-            console.warn("⚠️ WebSocket no conectado aún.");
-        }
+                console.warn("⚠️ WebSocket no conectado aún.");
+            }
     };
+   
     
-
-    //const handleSendClick = (x, y) => {
-    //    if (stompClient && stompClient.connected) {
-    //        stompClient.send("/click/registerClick", {}, JSON.stringify({ x, y }));
-    //        console.log(`📤 Enviando click: x=${x}, y=${y}`);
-    //        lastClickRef.current = { x, y };
-    //    }else {
-    //        console.warn("⚠️ WebSocket no conectado aún.");
-    //    }
-    //};
 
     const handleStartGame = async () => {
         if (!userSelected?.username || !userSelected?.password) {
