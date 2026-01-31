@@ -33,6 +33,10 @@ export const ClickPopApp = () => {
     if (storedScore) {
         setScore(JSON.parse(storedScore));
     }
+    const storedGame = localStorage.getItem("currentGame");
+    if (storedGame) {
+        setCurrentGame(JSON.parse(storedGame));
+    }
 }, []);
 
 
@@ -126,6 +130,7 @@ export const ClickPopApp = () => {
             setGameStarted(false);
             setPointData(null);
             setCorrectPoints([]);
+            localStorage.removeItem("currentGame");
         } catch (error) {
             console.error("Error al terminar partida:", error);
             alert("No se pudo guardar el puntaje.");
@@ -175,6 +180,7 @@ export const ClickPopApp = () => {
             const response = await axios.post("http://localhost:8090/game/create", userSelected);
             setCurrentGame(response.data); // Guarda el Game completo con ID
             setCorrectPoints([]);
+            localStorage.setItem("currentGame", JSON.stringify(response.data));
         } catch (error) {
             alert("No se pudo iniciar la partida. Verifica el backend.");
         }
