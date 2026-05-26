@@ -16,7 +16,7 @@ export const ClickPopApp = () => {
     const lastClickRef = useRef(null);
     const [currentGame, setCurrentGame] = useState(null);
 
-
+// Recuperacion de datos del almacen local si hay datos en el
     useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
@@ -37,25 +37,28 @@ export const ClickPopApp = () => {
     if (storedGame) {
         setCurrentGame(JSON.parse(storedGame));
     }
-}, []);
+    }, []);
 
-
+//Guarda los puntos del juego cada vez que cambian
     useEffect(() => {
       if (pointData) {
         localStorage.setItem('pointData', JSON.stringify(pointData));
       }
     }, [pointData]);
     
+//Guarda la puntuaciond de la partida cada vez que cambian
     useEffect(() => {
       if (score !== null) {
         localStorage.setItem('score', JSON.stringify(score));
       }
     }, [score]);
 
+//    Temmas relacionados con la conexion websocket    
     useEffect(() => {
         const socket = new SockJS("http://localhost:8090/game-WS");
         const client = Stomp.over(socket);
 
+        //Conexion a canal de websocket
         client.connect({}, () => {
             console.log("✅ Conectado a WebSocket");
 
@@ -65,19 +68,19 @@ export const ClickPopApp = () => {
 
 
             
-
+            //Conexion a comunicacion para la puntuacion
             client.subscribe("/backsend/score", (message) => {
                 console.log("📬 Suscripción a /backsend/score registrada");
 
                 const data = JSON.parse(message.body);
                 console.log("🎯 Puntos recibidos:", data);
-                const { message: correct } = data;
-                setScore(() => data.points);
-                localStorage.setItem("score", JSON.stringify(data.points));
+                const { valid, points } = data;
+                setScore(() => points);
+                localStorage.setItem("score", JSON.stringify(points));
 
                
 
-                if (correct && lastClickRef.current && pointData?.points) {
+                if (valid && lastClickRef.current && pointData?.points) {
                      const { x, y } = lastClickRef.current;
 
                     const updatedPoints = pointData.points.filter(([px, py]) => {
@@ -94,6 +97,7 @@ export const ClickPopApp = () => {
 
             console.log("📡 Intentando conectar WebSocket...");
 
+            //Conexion a comunicacion de puntos
             client.subscribe("/backsend/points", (message) => {
                 const points = JSON.parse(message.body);
                 console.log("📍 Coordenadas recibidas:", points);
@@ -111,6 +115,7 @@ export const ClickPopApp = () => {
         };
     }, [])
 
+    // Reset de variable, para permitir futuros reinicios
     useEffect(() => {
         if (resetForm) setResetForm(false);
     }, [resetForm]);
@@ -176,10 +181,17 @@ export const ClickPopApp = () => {
             return;
         }
 
+        // Resetear ANTES del await para no sobreescribir los puntos
+        // que llegan por WebSocket justo cuando el backend crea la partida
+        setScore(0);
+        setPointData(null);
+        setCorrectPoints([]);
+        localStorage.setItem("score", JSON.stringify(0));
+        localStorage.removeItem("pointData");
+
         try {
             const response = await axios.post("http://localhost:8090/game/create", userSelected);
-            setCurrentGame(response.data); // Guarda el Game completo con ID
-            setCorrectPoints([]);
+            setCurrentGame(response.data);
             localStorage.setItem("currentGame", JSON.stringify(response.data));
         } catch (error) {
             alert("No se pudo iniciar la partida. Verifica el backend.");
@@ -266,7 +278,6 @@ export const ClickPopApp = () => {
                     <button onClick={handleLogout} style={{ marginLeft: '20px' }}>Cerrar sesión</button>
                 </div>
             )}
-
             {!userSelected && (
                 <div className="user-form-container" style={{ marginBottom: '20px' }}>
                     <UserForm
